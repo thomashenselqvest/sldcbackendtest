@@ -1,0 +1,10 @@
+# Turnstone settings (key: value). Applied with PUT /v1/api/admin/settings/{key}.
+settings:
+  model.default_alias: opus
+  tools.search: "off"
+  tools.skip_permissions: true
+# Keys the server only reads at startup (the API wrongly reports restart_required=false
+# for tools.skip_permissions). If one of these changes, the sync Job restarts the server.
+restart_keys:
+  - tools.skip_permissions
+  - server.max_workstreams

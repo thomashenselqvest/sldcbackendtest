@@ -1,0 +1,13 @@
+ingress:
+  enabled: false
+resources:
+  limits: {cpu: 500m, memory: 256Mi}
+  requests: {cpu: 50m, memory: 64Mi}
+config:
+  toolsets: ["core"]
+  stateless: true
+  # Every request needs "Authorization: Bearer <token>". The token is forwarded to the
+  # Kubernetes API (cluster_auth_mode defaults to passthrough), which validates it.
+  # The MCP pod's own service account has no permissions.
+  require_oauth: true
+  skip_jwt_verification: true

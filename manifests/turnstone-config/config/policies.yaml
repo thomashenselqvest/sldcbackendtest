@@ -1,0 +1,6 @@
+# Tool policies, upserted by name. Patterns match the approval label (e.g.
+# skills__load__<skill>__<digest>) or the tool name.
+- name: allow-turnstone-admin-skill-load
+  tool_pattern: skills__load__turnstone-admin__*
+  action: allow
+  priority: 100

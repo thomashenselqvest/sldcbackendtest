@@ -1,0 +1,21 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: turnstone
+resources:
+  - rbac.yaml
+  - job.yaml
+# Config changes change the ConfigMap name hash -> the app goes OutOfSync -> sync -> the
+# PostSync Job re-runs sync.py. Skill files use "--" for "/" (ConfigMap keys can't nest).
+configMapGenerator:
+  - name: turnstone-config-script
+    files:
+      - sync.py
+  - name: turnstone-config
+    files:
+      - config/models.yaml
+      - config/settings.yaml
+      - config/mcp-servers.yaml
+      - config/policies.yaml
+      - config/skills.yaml
+      - skill--turnstone-admin--SKILL.md=config/skills/turnstone-admin/SKILL.md
+      - skill--turnstone-admin--scripts--tsadmin.py=config/skills/turnstone-admin/scripts/tsadmin.py

@@ -1,0 +1,10 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: turnstone-dev
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - {containerPort: 30080, hostPort: 8080, listenAddress: "127.0.0.1"}   # Turnstone server
+      - {containerPort: 30090, hostPort: 8090, listenAddress: "127.0.0.1"}   # Turnstone console
+      - {containerPort: 32746, hostPort: 2746, listenAddress: "127.0.0.1"}   # Argo Workflows UI
+      - {containerPort: 30880, hostPort: 8880, listenAddress: "127.0.0.1"}   # Argo CD UI

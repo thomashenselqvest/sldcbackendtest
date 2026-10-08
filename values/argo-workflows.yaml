@@ -1,0 +1,18 @@
+crds:
+  install: true
+  keep: true
+  # Plain tracked CRDs instead of the crd-installer PreSync hook Job.
+  full: false
+controller:
+  workflowNamespaces: [argo]
+workflow:
+  serviceAccount:
+    create: true
+    name: argo-workflow
+  rbac:
+    create: true
+server:
+  authModes: [server, client]
+  secure: false
+  serviceType: NodePort
+  serviceNodePort: 32746

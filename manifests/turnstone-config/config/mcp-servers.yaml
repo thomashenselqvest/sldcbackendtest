@@ -1,0 +1,6 @@
+# MCP servers, upserted by name. ${VAR} in headers is substituted from the Job env.
+- name: argo
+  transport: streamable-http
+  url: http://argo-mcp-kubernetes-mcp-server.argo-mcp.svc:8080/mcp
+  headers:
+    Authorization: Bearer ${MCP_TOKEN}

@@ -1,0 +1,9 @@
+# Skills, upserted by name. Files under skills/<name>/ are uploaded as skill resources
+# (only scripts/, references/, assets/ are accepted). "generated_assets" are written by the
+# sync Job from secrets/env and never live in Git.
+- name: turnstone-admin
+  activation: search
+  generated_assets:
+    assets/token: agent_token
+    assets/console_url: http://turnstone-console:8090
+    assets/server_url: http://turnstone-server:8080

@@ -1,0 +1,46 @@
+# Runs sync.py after every sync of this app (Argo CD PostSync hook).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: turnstone-config-sync
+  namespace: turnstone
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 1200
+  template:
+    spec:
+      serviceAccountName: turnstone-config
+      restartPolicy: Never
+      containers:
+        - name: sync
+          image: ghcr.io/turnstonelabs/turnstone:1.8.5
+          command: [python3, /sync/sync.py]
+          env:
+            # Order matters: POSTGRES_PASSWORD must precede TURNSTONE_DB_URL for $(…) expansion.
+            - name: TURNSTONE_DB_BACKEND
+              value: postgresql
+            - name: POSTGRES_PASSWORD
+              valueFrom: {secretKeyRef: {name: turnstone-db, key: password}}
+            - name: TURNSTONE_DB_URL
+              value: postgresql+psycopg://turnstone:$(POSTGRES_PASSWORD)@turnstone-postgresql:5432/turnstone
+            - name: ADMIN_PASSWORD
+              valueFrom: {secretKeyRef: {name: turnstone-bootstrap, key: ADMIN_PASSWORD}}
+            - name: ANTHROPIC_API_KEY
+              valueFrom: {secretKeyRef: {name: turnstone-bootstrap, key: ANTHROPIC_API_KEY}}
+            - name: MCP_TOKEN
+              valueFrom: {secretKeyRef: {name: turnstone-mcp-token, key: token}}
+            - name: POD_NAMESPACE
+              valueFrom: {fieldRef: {fieldPath: metadata.namespace}}
+            - name: CONFIG_DIR
+              value: /config
+          volumeMounts:
+            - {name: config, mountPath: /config}
+            - {name: script, mountPath: /sync}
+      volumes:
+        - name: config
+          configMap: {name: turnstone-config}
+        - name: script
+          configMap: {name: turnstone-config-script}

@@ -1,0 +1,24 @@
+# Service account Sensors use to submit workflows.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argo-events-sensor
+  namespace: argo
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: argo-events-sensor
+  namespace: argo
+rules:
+  - apiGroups: [argoproj.io]
+    resources: [workflows, workflowtemplates]
+    verbs: [get, list, watch, create, patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: argo-events-sensor
+  namespace: argo
+roleRef: {apiGroup: rbac.authorization.k8s.io, kind: Role, name: argo-events-sensor}
+subjects: [{kind: ServiceAccount, name: argo-events-sensor, namespace: argo}]

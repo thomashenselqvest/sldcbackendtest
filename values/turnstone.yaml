@@ -1,0 +1,21 @@
+image:
+  tag: "1.8.5"
+migrate:
+  enabled: false
+postgresql:
+  enabled: true
+  auth:
+    database: turnstone
+    username: turnstone
+    # Created by bootstrap.sh (keys: password, postgres-password). Avoids the Bitnami
+    # subchart's lookup/randAlphaNum, which would regenerate passwords on every render.
+    existingSecret: turnstone-db
+auth:
+  # Created by bootstrap.sh (key: TURNSTONE_JWT_SECRET)
+  existingSecret: turnstone-auth
+server:
+  resources:
+    requests: {cpu: 100m, memory: 512Mi}
+console:
+  resources:
+    requests: {cpu: 100m, memory: 256Mi}
