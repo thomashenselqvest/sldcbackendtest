@@ -1,0 +1,12 @@
+fullnameOverride: infisical-postgresql
+image:
+  registry: mirror.gcr.io
+  repository: bitnamilegacy/postgresql
+  tag: 16.2.0-debian-11-r16
+auth:
+  username: infisical
+  database: infisicalDB
+  existingSecret: infisical-db   # keys: password, postgres-password
+primary:
+  persistence:
+    size: 2Gi

@@ -1,0 +1,13 @@
+fullnameOverride: infisical-redis
+architecture: standalone
+image:
+  registry: mirror.gcr.io
+  repository: bitnamilegacy/redis
+  tag: 7.2.4-debian-11-r18
+auth:
+  enabled: true
+  existingSecret: infisical-redis
+  existingSecretPasswordKey: redis-password
+master:
+  persistence:
+    size: 1Gi

@@ -1,0 +1,38 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: infisical
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: infisical
+  syncPolicy:
+    automated: {prune: true, selfHeal: true}
+    retry: {limit: 10, backoff: {duration: 10s, factor: 2, maxDuration: 3m}}
+    syncOptions: [CreateNamespace=true, ServerSideApply=true]
+  sources:
+    - repoURL: https://dl.cloudsmith.io/public/infisical/helm-charts/helm/charts/
+      chart: infisical-standalone
+      targetRevision: 1.11.0
+      helm:
+        releaseName: infisical
+        valueFiles: [$values/values/infisical.yaml]
+    - repoURL: registry-1.docker.io/bitnamicharts
+      chart: postgresql
+      targetRevision: 14.1.10
+      helm:
+        releaseName: infisical-postgresql
+        valueFiles: [$values/values/infisical-postgresql.yaml]
+    - repoURL: registry-1.docker.io/bitnamicharts
+      chart: redis
+      targetRevision: 18.14.1
+      helm:
+        releaseName: infisical-redis
+        valueFiles: [$values/values/infisical-redis.yaml]
+    - repoURL: https://github.com/thomashenselqvest/sldcbackendtest.git
+      targetRevision: main
+      ref: values

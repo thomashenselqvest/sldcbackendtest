@@ -22,7 +22,7 @@ if kind get clusters 2>/dev/null | grep -qx "$CLUSTER"; then
   echo "==> deleting existing cluster $CLUSTER"
   kind delete cluster --name "$CLUSTER"
 fi
-for port in 8080 8090 2746 8880; do
+for port in 8080 8090 2746 8880 8881; do
   if ss -ltnH "sport = :$port" | grep -q .; then die "localhost:$port is already in use"; fi
 done
 
@@ -42,6 +42,7 @@ kubectl -n turnstone create secret generic turnstone-bootstrap \
   --from-literal=ADMIN_PASSWORD="$ADMIN_PASSWORD" \
   --from-literal=ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY"
 ( umask 077; printf 'username=admin\npassword=%s\n' "$ADMIN_PASSWORD" > "$SECRETS_DIR/turnstone-admin.txt" )
+"$ROOT/bootstrap/infisical-secrets.sh"
 
 echo "==> installing Argo CD $ARGOCD_CHART_VERSION"
 helm repo add argo https://argoproj.github.io/argo-helm >/dev/null 2>&1 || true
@@ -62,7 +63,7 @@ while :; do
   total=$(grep -c . <<<"$status" || true)
   ready=$(grep -c '=Synced/Healthy$' <<<"$status" || true)
   echo "    $ready/$total ready: $(grep -v '=Synced/Healthy$' <<<"$status" | tr '\n' ' ')"
-  [[ $total -ge 10 && $ready -eq $total ]] && break
+  [[ $total -ge 11 && $ready -eq $total ]] && break
   (( SECONDS < deadline )) || die "timed out; check: kubectl -n argocd get applications"
   sleep 15
 done
@@ -74,5 +75,6 @@ Done.
   Argo Workflows   http://localhost:2746
   Turnstone        http://localhost:8090   (login: $SECRETS_DIR/turnstone-admin.txt)
   Turnstone server http://localhost:8080
+  Infisical        http://localhost:8881   (create the first admin account on first visit)
 Config sync log:   kubectl -n turnstone logs job/turnstone-config-sync
 EOF

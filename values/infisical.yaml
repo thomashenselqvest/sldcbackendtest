@@ -1,0 +1,29 @@
+# Infisical 0.158.0 (chart infisical-standalone 1.11.0). Postgres and Redis come from their own
+# charts in the same app (values/infisical-postgresql.yaml, values/infisical-redis.yaml) so all
+# passwords come from Secrets created by bootstrap/infisical-secrets.sh, never from Git.
+ingress:
+  enabled: false
+  nginx:
+    enabled: false
+postgresql:
+  enabled: false
+  useExistingPostgresSecret:
+    enabled: true
+    existingConnectionStringSecret: {name: infisical-db, key: uri}
+redis:
+  enabled: false
+infisical:
+  replicaCount: 1
+  image:
+    tag: "v0.158.0"
+  # ENCRYPTION_KEY, AUTH_SECRET, SITE_URL
+  kubeSecretRef: infisical-secrets
+  extraEnv:
+    - name: REDIS_URL
+      valueFrom: {secretKeyRef: {name: infisical-redis, key: url}}
+  service:
+    type: NodePort
+    nodePort: 30881
+  resources:
+    limits: {memory: 1000Mi}
+    requests: {cpu: 100m, memory: 512Mi}

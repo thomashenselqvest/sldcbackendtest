@@ -10,6 +10,7 @@ A single-node kind cluster where Argo CD installs and manages, from this repo:
 | `argo-config` | EventBus, sensor RBAC, webhook example | `manifests/argo` |
 | `turnstone` | Turnstone 1.8.5 + Postgres | `charts/turnstone` (vendored, see `PATCHES.md`) + `manifests/turnstone` |
 | `argo-mcp` | Kubernetes MCP server for Turnstone agents | `ghcr.io/containers/charts/kubernetes-mcp-server` 0.1.0 + `manifests/argo-mcp` |
+| `infisical` | Infisical secret manager UI (+ its Postgres/Redis) | `infisical-standalone` 1.11.0 + Bitnami `postgresql`/`redis` + `values/infisical*.yaml` |
 | `turnstone-config` | Models, settings, MCP registration, admin agent + skill, policies | `manifests/turnstone-config` |
 
 ## Bootstrap
@@ -27,6 +28,7 @@ passwords land in `.secrets/`), installs Argo CD and applies `bootstrap/root-app
 | Argo Workflows | http://localhost:2746 |
 | Turnstone console | http://localhost:8090 |
 | Turnstone server | http://localhost:8080 |
+| Infisical | http://localhost:8881 (create the first admin account on first visit) |
 
 ## Changing Turnstone config
 
