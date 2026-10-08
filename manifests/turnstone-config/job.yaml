@@ -39,8 +39,12 @@ spec:
           volumeMounts:
             - {name: config, mountPath: /config}
             - {name: script, mountPath: /sync}
+            - {name: platform-admin-token, mountPath: /platform-admin, readOnly: true}
       volumes:
         - name: config
           configMap: {name: turnstone-config}
         - name: script
           configMap: {name: turnstone-config-script}
+        # token + ca.crt of the turnstone-platform-admin service account (kubeconfig asset)
+        - name: platform-admin-token
+          secret: {secretName: turnstone-platform-admin-token}

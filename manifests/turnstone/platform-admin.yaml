@@ -1,0 +1,23 @@
+# Identity of the platform-admin skill's CLIs (kubectl, argo, argocd --core, helm). The sync Job
+# turns this token into the skill's assets/kubeconfig; it never leaves the cluster.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: turnstone-platform-admin
+  namespace: turnstone
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: turnstone-platform-admin-token
+  namespace: turnstone
+  annotations:
+    kubernetes.io/service-account.name: turnstone-platform-admin
+type: kubernetes.io/service-account-token
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: turnstone-platform-admin
+roleRef: {apiGroup: rbac.authorization.k8s.io, kind: ClusterRole, name: cluster-admin}
+subjects: [{kind: ServiceAccount, name: turnstone-platform-admin, namespace: turnstone}]

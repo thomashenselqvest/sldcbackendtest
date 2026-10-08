@@ -257,6 +257,47 @@ def sync_mcp(api: Api) -> None:
     raise SystemExit(f"MCP servers not connected: {status}")
 
 
+def platform_admin_kubeconfig() -> str:
+    """kubeconfig for the turnstone-platform-admin service account (mounted token + CA).
+
+    Two contexts: platform-admin (current, namespace default) and argocd (namespace argocd,
+    for `argocd --core --kube-context argocd`).
+    """
+    sa = Path(os.environ.get("PLATFORM_ADMIN_TOKEN_DIR", "/platform-admin"))
+    if not (sa / "token").exists():
+        return ""
+    import base64
+
+    ca = base64.b64encode((sa / "ca.crt").read_bytes()).decode()
+    token = (sa / "token").read_text().strip()
+    cfg = {
+        "apiVersion": "v1",
+        "kind": "Config",
+        "clusters": [{"name": "in-cluster", "cluster": {
+            "server": "https://kubernetes.default.svc", "certificate-authority-data": ca}}],
+        "users": [{"name": "turnstone-platform-admin", "user": {"token": token}}],
+        "contexts": [
+            {"name": "platform-admin", "context": {"cluster": "in-cluster", "user": "turnstone-platform-admin", "namespace": "default"}},
+            {"name": "argocd", "context": {"cluster": "in-cluster", "user": "turnstone-platform-admin", "namespace": "argocd"}},
+        ],
+        "current-context": "platform-admin",
+    }
+    return yaml.safe_dump(cfg, sort_keys=False)
+
+
+def sync_personas(api: Api) -> None:
+    personas = load("personas.yaml") or []
+    existing = {p["name"]: p for p in items(api.req("GET", "/v1/api/admin/personas"), "personas")}
+    for p in personas:
+        cur = existing.get(p["name"])
+        if cur:
+            api.req("PATCH", f"/v1/api/admin/personas/{cur['persona_id']}", {k: v for k, v in p.items() if k != "name"})
+            log(f"persona {p['name']}: updated")
+        else:
+            api.req("POST", "/v1/api/admin/personas", p)
+            log(f"persona {p['name']}: created")
+
+
 def sync_service_users(api: Api, kube: Kube) -> None:
     """Non-admin users with a custom role; token minted once into a Kubernetes Secret."""
     users = load("service-users.yaml") or []
@@ -380,7 +421,8 @@ def main() -> None:
     needs_restart = sync_settings(api)
     sync_mcp(api)
     agent_token = ensure_agent_token(kube)
-    sync_skills(api, {"agent_token": agent_token})
+    sync_skills(api, {"agent_token": agent_token, "platform_admin_kubeconfig": platform_admin_kubeconfig()})
+    sync_personas(api)
     sync_policies(api)
     sync_service_users(api, kube)
 

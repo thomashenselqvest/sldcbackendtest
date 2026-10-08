@@ -4,3 +4,7 @@
   tool_pattern: skills__load__turnstone-admin__*
   action: allow
   priority: 100
+- name: allow-platform-admin-skill-load
+  tool_pattern: skills__load__platform-admin__*
+  action: allow
+  priority: 100

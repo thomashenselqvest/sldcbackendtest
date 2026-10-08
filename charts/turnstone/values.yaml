@@ -33,6 +33,11 @@ postgresql:
 # -- Turnstone server (main API + web UI)
 server:
   replicas: 1
+  # -- Extra init containers, env vars, volume mounts and volumes for the server pod
+  extraInitContainers: []
+  extraEnv: []
+  extraVolumeMounts: []
+  extraVolumes: []
   resources:
     requests:
       cpu: 500m

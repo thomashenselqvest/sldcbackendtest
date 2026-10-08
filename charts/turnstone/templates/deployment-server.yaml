@@ -30,6 +30,10 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- with .Values.server.extraInitContainers }}
+      initContainers:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: server
           image: {{ include "turnstone.image" . }}
@@ -72,6 +76,13 @@ spec:
                   name: {{ include "turnstone.auth.secretName" . }}
                   key: TURNSTONE_JWT_SECRET
           {{- end }}
+          {{- with .Values.server.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.server.extraVolumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           readinessProbe:
             httpGet:
               path: /health
@@ -86,3 +97,7 @@ spec:
             periodSeconds: 20
           resources:
             {{- toYaml .Values.server.resources | nindent 12 }}
+      {{- with .Values.server.extraVolumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

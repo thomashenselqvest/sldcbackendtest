@@ -111,3 +111,14 @@ Qdrant holds the `knowledge` collection; browse and search it in the dashboard
 public GitHub repo (`owner/name`), branch and optional path prefix. Markdown files are split at
 headings and stored with metadata (`source`, `path`, `heading`). Re-running without `reset=true`
 adds duplicates.
+
+## Platform admin persona
+
+Persona **platform-admin** plus skill **platform-admin**: an agent that can set up and bootstrap
+anything with `kubectl`, `argo`, `argocd --core` and `helm` (installed into the Turnstone server pod
+by the `cli-tools` init container) and the Turnstone admin API.
+
+- Credentials: a kubeconfig for the `turnstone-platform-admin` service account (**cluster-admin**),
+  built in-cluster by the config sync and shipped only as a file of the `platform-admin` skill.
+- With `tools.skip_permissions: true` it runs every command **without approval**.
+- Use it: new workstream -> persona "Platform Admin" (it loads its skill itself).

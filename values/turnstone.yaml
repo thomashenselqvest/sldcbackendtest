@@ -16,6 +16,30 @@ auth:
 server:
   resources:
     requests: {cpu: 100m, memory: 512Mi}
+  # CLIs for the platform-admin persona/skill, downloaded at pod start into /opt/cli/bin and put
+  # on PATH. No credentials here: the kubeconfig only ships with the platform-admin skill.
+  extraInitContainers:
+    - name: cli-tools
+      image: alpine:3.22
+      command: [sh, -euc]
+      args:
+        - |
+          apk add --no-cache curl >/dev/null
+          cd /opt/cli/bin
+          curl -fsSLo kubectl https://dl.k8s.io/release/v1.37.0/bin/linux/amd64/kubectl
+          curl -fsSL https://github.com/argoproj/argo-workflows/releases/download/v4.1.4/argo-linux-amd64.gz | gunzip > argo
+          curl -fsSLo argocd https://github.com/argoproj/argo-cd/releases/download/v3.5.4/argocd-linux-amd64
+          curl -fsSL https://get.helm.sh/helm-v4.3.0-linux-amd64.tar.gz | tar -xzO linux-amd64/helm > helm
+          chmod 755 kubectl argo argocd helm
+          ls -la
+      volumeMounts: [{name: cli-tools, mountPath: /opt/cli/bin}]
+  extraVolumes:
+    - {name: cli-tools, emptyDir: {}}
+  extraVolumeMounts:
+    - {name: cli-tools, mountPath: /opt/cli/bin, readOnly: true}
+  extraEnv:
+    - name: PATH
+      value: /opt/cli/bin:/app/.venv/bin:/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin
 console:
   resources:
     requests: {cpu: 100m, memory: 256Mi}

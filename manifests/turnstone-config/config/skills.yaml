@@ -7,3 +7,10 @@
     assets/token: agent_token
     assets/console_url: http://turnstone-console:8090
     assets/server_url: http://turnstone-server:8080
+- name: platform-admin
+  activation: search
+  generated_assets:
+    assets/kubeconfig: platform_admin_kubeconfig   # built by the sync Job from the SA token
+    assets/token: agent_token                      # Turnstone admin API (turnstone-agent user)
+    assets/console_url: http://turnstone-console:8090
+    assets/server_url: http://turnstone-server:8080

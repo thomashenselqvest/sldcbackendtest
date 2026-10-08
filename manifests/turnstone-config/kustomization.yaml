@@ -18,5 +18,8 @@ configMapGenerator:
       - config/policies.yaml
       - config/skills.yaml
       - config/service-users.yaml
+      - config/personas.yaml
+      - skill--platform-admin--SKILL.md=config/skills/platform-admin/SKILL.md
+      - skill--platform-admin--scripts--tsadmin.py=config/skills/turnstone-admin/scripts/tsadmin.py
       - skill--turnstone-admin--SKILL.md=config/skills/turnstone-admin/SKILL.md
       - skill--turnstone-admin--scripts--tsadmin.py=config/skills/turnstone-admin/scripts/tsadmin.py

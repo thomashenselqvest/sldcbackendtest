@@ -8,3 +8,6 @@ Source: https://github.com/turnstonelabs/turnstone, tag `v1.8.5`, path `deploy/h
    before Postgres exists and deadlocks the first sync. Our values set `migrate.enabled: false`;
    server, console and `turnstone-admin` run migrations on startup (`init_storage(run_migrations=True)`).
 2. `Chart.yaml`: `appVersion` 0.3.0 -> 1.8.5 (upstream never bumped it), chart `version` suffixed `-sdlc.1`.
+3. `templates/deployment-server.yaml` + `values.yaml`: generic `server.extraInitContainers`,
+   `server.extraEnv`, `server.extraVolumeMounts`, `server.extraVolumes` (all empty by default).
+   Used to install the platform-admin CLIs (kubectl, argo, argocd, helm) into the server pod.
