@@ -13,7 +13,16 @@ spec:
   syncPolicy:
     automated: {prune: true, selfHeal: true}
     retry: {limit: 10, backoff: {duration: 10s, factor: 2, maxDuration: 3m}}
-    syncOptions: [CreateNamespace=true, ServerSideApply=true]
+    # RespectIgnoreDifferences: also don't *apply* the ignored fields, keep the live values.
+    syncOptions: [CreateNamespace=true, ServerSideApply=true, RespectIgnoreDifferences=true]
+  # The chart stamps {{ now }} into updatedAt annotations, so every render (every ~3 min refresh)
+  # differs and self-heal would roll the pod forever.
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /metadata/annotations/updatedAt
+        - /spec/template/metadata/annotations/updatedAt
   sources:
     - repoURL: https://dl.cloudsmith.io/public/infisical/helm-charts/helm/charts/
       chart: infisical-standalone
