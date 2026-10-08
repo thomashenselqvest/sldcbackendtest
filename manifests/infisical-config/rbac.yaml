@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: infisical-config
+  namespace: infisical
+---
+# Own namespace: store/read the admin identity token.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata: {name: infisical-config, namespace: infisical}
+rules:
+  - {apiGroups: [""], resources: [secrets], verbs: [create]}
+  - {apiGroups: [""], resources: [secrets], resourceNames: [infisical-admin-token], verbs: [get]}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata: {name: infisical-config, namespace: infisical}
+roleRef: {apiGroup: rbac.authorization.k8s.io, kind: Role, name: infisical-config}
+subjects: [{kind: ServiceAccount, name: infisical-config, namespace: infisical}]
+---
+# Read the Turnstone Secrets once, to seed Infisical.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata: {name: infisical-config-seed, namespace: turnstone}
+rules:
+  - apiGroups: [""]
+    resources: [secrets]
+    resourceNames: [turnstone-bootstrap, turnstone-auth, turnstone-db]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata: {name: infisical-config-seed, namespace: turnstone}
+roleRef: {apiGroup: rbac.authorization.k8s.io, kind: Role, name: infisical-config-seed}
+subjects: [{kind: ServiceAccount, name: infisical-config, namespace: infisical}]
+---
+# Write the ESO reader credentials.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata: {name: infisical-config-reader, namespace: external-secrets}
+rules:
+  - {apiGroups: [""], resources: [secrets], verbs: [create]}
+  - {apiGroups: [""], resources: [secrets], resourceNames: [infisical-universal-auth], verbs: [get]}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata: {name: infisical-config-reader, namespace: external-secrets}
+roleRef: {apiGroup: rbac.authorization.k8s.io, kind: Role, name: infisical-config-reader}
+subjects: [{kind: ServiceAccount, name: infisical-config, namespace: infisical}]

@@ -1,0 +1,18 @@
+{
+  "organization": "sdlc",
+  "project": {"name": "SDLC Platform", "slug": "sdlc-platform", "environment": "dev"},
+  "secrets": [
+    {"name": "ANTHROPIC_API_KEY", "comment": "Claude API key used by Turnstone models",
+     "from": {"namespace": "turnstone", "secret": "turnstone-bootstrap", "key": "ANTHROPIC_API_KEY"}},
+    {"name": "TURNSTONE_ADMIN_PASSWORD", "comment": "Turnstone 'admin' user password",
+     "from": {"namespace": "turnstone", "secret": "turnstone-bootstrap", "key": "ADMIN_PASSWORD"}},
+    {"name": "TURNSTONE_JWT_SECRET", "comment": "Turnstone session signing key (rotating logs everyone out)",
+     "from": {"namespace": "turnstone", "secret": "turnstone-auth", "key": "TURNSTONE_JWT_SECRET"}},
+    {"name": "TURNSTONE_DB_PASSWORD", "comment": "DO NOT ROTATE HERE: Postgres keeps its initial password",
+     "from": {"namespace": "turnstone", "secret": "turnstone-db", "key": "password"}},
+    {"name": "TURNSTONE_DB_POSTGRES_PASSWORD", "comment": "DO NOT ROTATE HERE: Postgres keeps its initial password",
+     "from": {"namespace": "turnstone", "secret": "turnstone-db", "key": "postgres-password"}}
+  ],
+  "reader": {"name": "external-secrets", "projectRole": "viewer",
+             "secret": {"namespace": "external-secrets", "name": "infisical-universal-auth"}}
+}

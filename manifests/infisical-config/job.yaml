@@ -1,0 +1,35 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: infisical-config-sync
+  namespace: infisical
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 900
+  template:
+    spec:
+      serviceAccountName: infisical-config
+      restartPolicy: Never
+      containers:
+        - name: sync
+          image: python:3.13-alpine
+          command: [python3, /scripts/sync.py]
+          env:
+            - name: POD_NAMESPACE
+              valueFrom: {fieldRef: {fieldPath: metadata.namespace}}
+            - name: INFISICAL_ADMIN_EMAIL
+              valueFrom: {secretKeyRef: {name: infisical-admin, key: email}}
+            - name: INFISICAL_ADMIN_PASSWORD
+              valueFrom: {secretKeyRef: {name: infisical-admin, key: password}}
+            - {name: CONFIG_FILE, value: /config/config.json}
+          volumeMounts:
+            - {name: scripts, mountPath: /scripts}
+            - {name: config, mountPath: /config}
+      volumes:
+        - name: scripts
+          configMap: {name: infisical-config-script}
+        - name: config
+          configMap: {name: infisical-config}

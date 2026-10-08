@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# No top-level "namespace:": the RBAC spans infisical, turnstone and external-secrets.
+resources:
+  - rbac.yaml
+  - job.yaml
+configMapGenerator:
+  - name: infisical-config-script
+    namespace: infisical
+    files: [sync.py]
+  - name: infisical-config
+    namespace: infisical
+    files: [config.json]

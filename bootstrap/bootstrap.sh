@@ -63,7 +63,7 @@ while :; do
   total=$(grep -c . <<<"$status" || true)
   ready=$(grep -c '=Synced/Healthy$' <<<"$status" || true)
   echo "    $ready/$total ready: $(grep -v '=Synced/Healthy$' <<<"$status" | tr '\n' ' ')"
-  [[ $total -ge 11 && $ready -eq $total ]] && break
+  [[ $total -ge 14 && $ready -eq $total ]] && break
   (( SECONDS < deadline )) || die "timed out; check: kubectl -n argocd get applications"
   sleep 15
 done
@@ -75,6 +75,6 @@ Done.
   Argo Workflows   http://localhost:2746
   Turnstone        http://localhost:8090   (login: $SECRETS_DIR/turnstone-admin.txt)
   Turnstone server http://localhost:8080
-  Infisical        http://localhost:8881   (create the first admin account on first visit)
+  Infisical        http://localhost:8881   (login: $SECRETS_DIR/infisical-admin.txt)
 Config sync log:   kubectl -n turnstone logs job/turnstone-config-sync
 EOF

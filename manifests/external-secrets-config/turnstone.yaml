@@ -1,0 +1,39 @@
+# Turnstone's Secrets are synced from Infisical. creationPolicy Merge: bootstrap.sh creates the
+# Secrets first (and they seed Infisical once); afterwards Infisical is the source of truth.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: turnstone-bootstrap
+  namespace: turnstone
+spec:
+  refreshInterval: 1m
+  secretStoreRef: {kind: ClusterSecretStore, name: infisical}
+  target: {name: turnstone-bootstrap, creationPolicy: Merge}
+  data:
+    - {secretKey: ANTHROPIC_API_KEY, remoteRef: {key: ANTHROPIC_API_KEY}}
+    - {secretKey: ADMIN_PASSWORD, remoteRef: {key: TURNSTONE_ADMIN_PASSWORD}}
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: turnstone-auth
+  namespace: turnstone
+spec:
+  refreshInterval: 1m
+  secretStoreRef: {kind: ClusterSecretStore, name: infisical}
+  target: {name: turnstone-auth, creationPolicy: Merge}
+  data:
+    - {secretKey: TURNSTONE_JWT_SECRET, remoteRef: {key: TURNSTONE_JWT_SECRET}}
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: turnstone-db
+  namespace: turnstone
+spec:
+  refreshInterval: 1m
+  secretStoreRef: {kind: ClusterSecretStore, name: infisical}
+  target: {name: turnstone-db, creationPolicy: Merge}
+  data:
+    - {secretKey: password, remoteRef: {key: TURNSTONE_DB_PASSWORD}}
+    - {secretKey: postgres-password, remoteRef: {key: TURNSTONE_DB_POSTGRES_PASSWORD}}

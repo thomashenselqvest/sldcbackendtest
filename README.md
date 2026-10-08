@@ -10,6 +10,7 @@ A single-node kind cluster where Argo CD installs and manages, from this repo:
 | `argo-config` | EventBus, sensor RBAC, webhook example | `manifests/argo` |
 | `turnstone` | Turnstone 1.8.5 + Postgres | `charts/turnstone` (vendored, see `PATCHES.md`) + `manifests/turnstone` |
 | `argo-mcp` | Kubernetes MCP server for Turnstone agents | `ghcr.io/containers/charts/kubernetes-mcp-server` 0.1.0 + `manifests/argo-mcp` |
+| `external-secrets` | External Secrets Operator | `external-secrets` 2.12.0 |
 | `infisical` | Infisical secret manager UI (+ its Postgres/Redis) | `infisical-standalone` 1.11.0 + Bitnami `postgresql`/`redis` + `values/infisical*.yaml` |
 | `turnstone-config` | Models, settings, MCP registration, admin agent + skill, policies | `manifests/turnstone-config` |
 
@@ -28,7 +29,7 @@ passwords land in `.secrets/`), installs Argo CD and applies `bootstrap/root-app
 | Argo Workflows | http://localhost:2746 |
 | Turnstone console | http://localhost:8090 |
 | Turnstone server | http://localhost:8080 |
-| Infisical | http://localhost:8881 (create the first admin account on first visit) |
+| Infisical | http://localhost:8881 (login: `.secrets/infisical-admin.txt`) |
 
 ## Changing Turnstone config
 
@@ -66,3 +67,25 @@ Agents talk to Turnstone as the non-admin `aisdlc-runner` user (custom role, tok
 **Add an agent**: create `agents/<name>/values.yaml` (see `agents/issue-triage/`) and push. The
 ApplicationSet creates `agent-<name>`; deploy it by clicking **Sync** in Argo CD (project
 `aisdlc-agents`). Values reference: `charts/aisdlc-agent/values.yaml`.
+
+## Secrets in Infisical
+
+Human-managed keys live in Infisical (project **SDLC Platform**, environment **dev**) and External
+Secrets Operator syncs them into Kubernetes every minute:
+
+| Infisical secret | Kubernetes Secret (key) |
+|---|---|
+| `ANTHROPIC_API_KEY` | `turnstone/turnstone-bootstrap` (`ANTHROPIC_API_KEY`) |
+| `TURNSTONE_ADMIN_PASSWORD` | `turnstone/turnstone-bootstrap` (`ADMIN_PASSWORD`) |
+| `TURNSTONE_JWT_SECRET` | `turnstone/turnstone-auth` |
+| `TURNSTONE_DB_PASSWORD`, `TURNSTONE_DB_POSTGRES_PASSWORD` | `turnstone/turnstone-db` |
+
+`infisical-config` (PostSync Job) bootstraps Infisical once, seeds these from the Secrets
+`bootstrap.sh` created (only if missing in Infisical), and creates the read-only `external-secrets`
+machine identity used by the `infisical` ClusterSecretStore. The mapping is in
+`manifests/external-secrets-config/turnstone.yaml`.
+
+- **Rotating the Anthropic key**: change it in Infisical; within a minute the Secret updates. Then
+  sync `turnstone-config` in Argo CD so the models pick it up.
+- **Don't rotate the DB passwords in Infisical**: Postgres keeps the password it was initialised with.
+- Generated machine tokens (agent/runner tokens, MCP service-account token) stay in Kubernetes only.

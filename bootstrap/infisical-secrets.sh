@@ -4,6 +4,7 @@
 set -euo pipefail
 NS=infisical
 SITE_URL="${INFISICAL_SITE_URL:-http://localhost:8881}"
+SECRETS_DIR="$(cd "$(dirname "$0")/.." && pwd)/.secrets"
 gen() { openssl rand -hex "${1:-24}"; }
 exists() { kubectl -n "$NS" get secret "$1" >/dev/null 2>&1; }
 
@@ -26,5 +27,12 @@ if ! exists infisical-redis; then
   kubectl -n "$NS" create secret generic infisical-redis \
     --from-literal=redis-password="$pw" \
     --from-literal=url="redis://default:${pw}@infisical-redis-master:6379"
+fi
+if ! exists infisical-admin; then
+  # Login for the Infisical UI; the infisical-config Job bootstraps the instance with it.
+  email="${INFISICAL_ADMIN_EMAIL:-admin@sdlc.local}"; pw="$(gen 16)"
+  kubectl -n "$NS" create secret generic infisical-admin --from-literal=email="$email" --from-literal=password="$pw"
+  mkdir -p "$SECRETS_DIR" && chmod 700 "$SECRETS_DIR"
+  ( umask 077; printf 'email=%s\npassword=%s\n' "$email" "$pw" > "$SECRETS_DIR/infisical-admin.txt" )
 fi
 echo "infisical secrets ready"
