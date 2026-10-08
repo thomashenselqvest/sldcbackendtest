@@ -10,3 +10,4 @@ nodes:
       - {containerPort: 30880, hostPort: 8880, listenAddress: "127.0.0.1"}   # Argo CD UI
       - {containerPort: 30881, hostPort: 8881, listenAddress: "127.0.0.1"}   # Infisical
       - {containerPort: 30633, hostPort: 6333, listenAddress: "127.0.0.1"}   # Qdrant API + dashboard
+      - {containerPort: 30882, hostPort: 8882, listenAddress: "127.0.0.1"}   # Helm Dashboard

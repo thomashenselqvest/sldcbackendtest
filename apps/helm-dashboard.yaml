@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: helm-dashboard
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: helm-dashboard
+  syncPolicy:
+    automated: {prune: true, selfHeal: true}
+    retry: {limit: 10, backoff: {duration: 10s, factor: 2, maxDuration: 3m}}
+    syncOptions: [CreateNamespace=true, ServerSideApply=true]
+  sources:
+    - repoURL: https://helm-charts.komodor.io
+      chart: helm-dashboard
+      targetRevision: 2.0.7
+      helm:
+        releaseName: helm-dashboard
+        valueFiles: [$values/values/helm-dashboard.yaml]
+    - repoURL: https://github.com/thomashenselqvest/sldcbackendtest.git
+      targetRevision: main
+      path: manifests/helm-dashboard
+    - repoURL: https://github.com/thomashenselqvest/sldcbackendtest.git
+      targetRevision: main
+      ref: values
