@@ -43,8 +43,14 @@ spec:
           volumeMounts: [{name: data, mountPath: /app/data}]
         - name: gateway
           image: node:24-alpine
-          command: [npx, -y, "supergateway@4.1.0", --sse, "http://localhost:8080/",
-                    --outputTransport, streamableHttp, --port, "8000", --healthEndpoint, /healthz]
+          # supergateway 4.1.0 can't do sse->streamableHttp directly, so chain two:
+          # inner (SSE -> stdio) runs as the stdio server of the outer (stdio -> streamable HTTP).
+          command: [sh, -c]
+          args:
+            - >-
+              npm install -g --silent supergateway@4.1.0 &&
+              exec supergateway --stdio "supergateway --sse http://localhost:8080/"
+              --outputTransport streamableHttp --stateful --port 8000 --healthEndpoint /healthz
           env:
             - {name: npm_config_cache, value: /tmp/npm}
           ports: [{name: mcp, containerPort: 8000}]
