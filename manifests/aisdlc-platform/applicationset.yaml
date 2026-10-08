@@ -1,0 +1,33 @@
+# Every folder in agents/ becomes an Application "agent-<folder>" in the aisdlc-agents project.
+# Sync is manual: deploying an agent is clicking "Sync" in Argo CD.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: aisdlc-agents
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - git:
+        repoURL: https://github.com/thomashenselqvest/sldcbackendtest.git
+        revision: main
+        directories:
+          - path: agents/*
+  template:
+    metadata:
+      name: 'agent-{{.path.basename}}'
+      labels:
+        aisdlc.io/agent: '{{.path.basename}}'
+    spec:
+      project: aisdlc-agents
+      source:
+        repoURL: https://github.com/thomashenselqvest/sldcbackendtest.git
+        targetRevision: main
+        path: charts/aisdlc-agent
+        helm:
+          releaseName: '{{.path.basename}}'
+          valueFiles: ['../../agents/{{.path.basename}}/values.yaml']
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: aisdlc-agents

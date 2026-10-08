@@ -41,3 +41,26 @@ syncs, and the `turnstone-config-sync` PostSync Job (`sync.py`) upserts everythi
   user. Its API token is minted once by the sync Job and kept in Secret `turnstone-agent-token`.
 
 This is a test setup: agents get full control of the cluster and of Turnstone.
+
+## AI SDLC agents
+
+An **agent** is one Argo CD Application in the `aisdlc-agents` project, deployed into the
+`aisdlc-agents` namespace, with every part labelled `aisdlc.io/agent=<name>`. It consists of:
+
+1. **Webhook receiver**: an Argo Events EventSource at
+   `http://<name>-eventsource-svc.aisdlc-agents:12000/<name>`, plus a Sensor.
+2. **Per-event workflow** (WorkflowTemplate `<name>`):
+   - starts an **ephemeral Turnstone node** (pod `eph-<workflow>` in the `turnstone` namespace),
+     which joins the cluster through the shared database;
+   - creates a workstream **pinned to that node** with the agent's persona and the webhook body
+     as the first message;
+   - waits for the answer (the workflow output `result`);
+   - deletes the node.
+3. **Persona** `<name>` in Turnstone, created/updated by a PostSync hook on every sync.
+
+Agents talk to Turnstone as the non-admin `aisdlc-runner` user (custom role, token in Secret
+`aisdlc-agents/turnstone-runner-token`, minted by the central config sync).
+
+**Add an agent**: create `agents/<name>/values.yaml` (see `agents/issue-triage/`) and push. The
+ApplicationSet creates `agent-<name>`; deploy it by clicking **Sync** in Argo CD (project
+`aisdlc-agents`). Values reference: `charts/aisdlc-agent/values.yaml`.

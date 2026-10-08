@@ -55,14 +55,14 @@ helm install argocd argo/argo-cd --version "$ARGOCD_CHART_VERSION" \
 echo "==> applying root app"
 kubectl apply -f "$ROOT/bootstrap/root-app.yaml"
 
-echo "==> waiting for all apps to be Synced/Healthy (up to 20 min)"
+echo "==> waiting for all platform apps to be Synced/Healthy (agent apps are manual-sync) (up to 20 min)"
 deadline=$((SECONDS + 1200))
 while :; do
-  status="$(kubectl -n argocd get applications -o jsonpath='{range .items[*]}{.metadata.name}={.status.sync.status}/{.status.health.status}{"\n"}{end}' 2>/dev/null || true)"
+  status="$(kubectl -n argocd get applications -l '!aisdlc.io/agent' -o jsonpath='{range .items[*]}{.metadata.name}={.status.sync.status}/{.status.health.status}{"\n"}{end}' 2>/dev/null || true)"
   total=$(grep -c . <<<"$status" || true)
   ready=$(grep -c '=Synced/Healthy$' <<<"$status" || true)
   echo "    $ready/$total ready: $(grep -v '=Synced/Healthy$' <<<"$status" | tr '\n' ' ')"
-  [[ $total -ge 8 && $ready -eq $total ]] && break
+  [[ $total -ge 10 && $ready -eq $total ]] && break
   (( SECONDS < deadline )) || die "timed out; check: kubectl -n argocd get applications"
   sleep 15
 done

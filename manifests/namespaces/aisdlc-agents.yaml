@@ -1,0 +1,7 @@
+# Created before the charts (wave -2): argo-workflows puts its workflow service account here.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: aisdlc-agents
+  labels:
+    aisdlc.io/purpose: agents

@@ -1,0 +1,14 @@
+# Non-admin service users. Each gets a custom role and an API token stored in a Kubernetes
+# Secret (key "token"). The token is minted once; the Secret's existence is the guard.
+- username: aisdlc-runner
+  display_name: AI SDLC agent runner
+  role:
+    name: aisdlc-runner
+    display_name: AI SDLC agent runner
+    # Start workstreams on (ephemeral) nodes, manage personas, see the node list. No admin.*
+    # except the read-only cluster view needed to see when an ephemeral node has joined.
+    permissions: [read, write, approve, tools.approve, workstreams.create, workstreams.close,
+                  persona.read, persona.create, persona.write, admin.cluster.inspect]
+  token:
+    scopes: read,write,approve
+    secret: {namespace: aisdlc-agents, name: turnstone-runner-token}

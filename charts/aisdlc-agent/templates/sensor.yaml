@@ -1,0 +1,37 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Sensor
+metadata:
+  name: {{ include "agent.name" . }}
+  labels: {{- include "agent.labels" . | nindent 4 }}
+spec:
+  template:
+    serviceAccountName: aisdlc-sensor
+    metadata:
+      labels: {{- include "agent.labels" . | nindent 8 }}
+  dependencies:
+    - name: event
+      eventSourceName: {{ include "agent.name" . }}
+      eventName: event
+  triggers:
+    - template:
+        name: run-agent
+        argoWorkflow:
+          operation: submit
+          source:
+            resource:
+              apiVersion: argoproj.io/v1alpha1
+              kind: Workflow
+              metadata:
+                generateName: {{ include "agent.name" . }}-
+                labels: {{- include "agent.labels" . | nindent 18 }}
+              spec:
+                workflowTemplateRef:
+                  name: {{ include "agent.name" . }}
+                arguments:
+                  parameters:
+                    - name: payload
+                      value: "{}"
+          parameters:
+            # The whole request body (JSON) becomes the workflow's "payload" parameter.
+            - src: {dependencyName: event, dataKey: body}
+              dest: spec.arguments.parameters.0.value

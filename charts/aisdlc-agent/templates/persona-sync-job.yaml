@@ -1,0 +1,41 @@
+{{- if not .Values.persona.basePrompt }}{{ fail "persona.basePrompt is required" }}{{ end }}
+# Creates/updates this agent's Turnstone persona after every sync (Argo CD PostSync hook).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "agent.name" . }}-persona-sync
+  labels: {{- include "agent.labels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels: {{- include "agent.labels" . | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: sync
+          image: {{ .Values.turnstone.image }}
+          command: [python3, /scripts/persona_sync.py]
+          env:
+            - {name: CONSOLE_URL, value: {{ .Values.turnstone.consoleUrl | quote }}}
+            - name: TURNSTONE_TOKEN
+              valueFrom: {secretKeyRef: {name: {{ .Values.turnstone.runnerTokenSecret }}, key: token}}
+            - name: PERSONA_JSON
+              value: {{ dict
+                  "name" (include "agent.name" .)
+                  "display_name" (.Values.persona.displayName | default (include "agent.name" .))
+                  "description" .Values.persona.description
+                  "base_prompt" .Values.persona.basePrompt
+                  "mcp_enabled" .Values.persona.mcpEnabled
+                  "memory_enabled" .Values.persona.memoryEnabled
+                  "applies_to_kinds" (list "interactive")
+                  "enabled" true
+                | toJson | quote }}
+          volumeMounts:
+            - {name: scripts, mountPath: /scripts}
+      volumes:
+        - name: scripts
+          configMap: {name: {{ include "agent.name" . }}-persona-sync}

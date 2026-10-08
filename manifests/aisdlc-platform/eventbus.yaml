@@ -1,0 +1,9 @@
+# EventSources and Sensors must share a namespace with an EventBus.
+apiVersion: argoproj.io/v1alpha1
+kind: EventBus
+metadata:
+  name: default
+  namespace: aisdlc-agents
+spec:
+  jetstream:
+    version: latest

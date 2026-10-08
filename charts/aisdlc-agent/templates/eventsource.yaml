@@ -1,0 +1,16 @@
+apiVersion: argoproj.io/v1alpha1
+kind: EventSource
+metadata:
+  name: {{ include "agent.name" . }}
+  labels: {{- include "agent.labels" . | nindent 4 }}
+spec:
+  template:
+    metadata:
+      labels: {{- include "agent.labels" . | nindent 8 }}
+  service:
+    ports: [{port: {{ .Values.webhook.port }}, targetPort: {{ .Values.webhook.port }}}]
+  webhook:
+    event:
+      port: {{ .Values.webhook.port | quote }}
+      endpoint: {{ .Values.webhook.endpoint | default (printf "/%s" (include "agent.name" .)) }}
+      method: POST

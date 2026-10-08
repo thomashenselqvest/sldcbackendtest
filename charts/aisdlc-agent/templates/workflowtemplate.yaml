@@ -1,0 +1,113 @@
+{{- $name := include "agent.name" . -}}
+{{- $t := .Values.turnstone -}}
+# One run per webhook event:
+#   start-node  ephemeral Turnstone server pod in the turnstone namespace (joins the cluster
+#               through the shared database; node id eph-<workflow name>)
+#   drive       creates a workstream pinned to that node with this agent's persona, waits for
+#               the answer, outputs it
+#   stop-node   (exit handler, always runs) deletes the pod
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: {{ $name }}
+  labels: {{- include "agent.labels" . | nindent 4 }}
+spec:
+  serviceAccountName: argo-workflow
+  entrypoint: main
+  onExit: stop-node
+  activeDeadlineSeconds: {{ add .Values.workstream.timeoutSeconds 600 }}
+  podMetadata:
+    labels: {{- include "agent.labels" . | nindent 6 }}
+  arguments:
+    parameters:
+      - name: payload
+        value: "{}"
+  templates:
+    - name: main
+      steps:
+        - - name: start-node
+            template: start-node
+        - - name: drive
+            template: drive
+
+    - name: start-node
+      resource:
+        action: create
+        successCondition: status.phase == Running
+        failureCondition: status.phase in (Failed, Succeeded)
+        manifest: |
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: eph-{{`{{workflow.name}}`}}
+            namespace: {{ $t.namespace }}
+            labels:
+              aisdlc.io/agent: {{ $name }}
+              aisdlc.io/workflow: {{`{{workflow.name}}`}}
+              aisdlc.io/role: ephemeral-node
+          spec:
+            restartPolicy: Never
+            # Safety net if the exit handler never runs.
+            activeDeadlineSeconds: 3600
+            containers:
+              - name: server
+                image: {{ $t.image }}
+                command: [turnstone-server, --host, "0.0.0.0", --port, "8080"]
+                ports: [{name: http, containerPort: 8080}]
+                envFrom:
+                  - configMapRef: {name: {{ $t.configMap }}}
+                env:
+                  - {name: TURNSTONE_DB_BACKEND, value: postgresql}
+                  - name: POSTGRES_PASSWORD
+                    valueFrom: {secretKeyRef: {name: {{ $t.dbSecret }}, key: password}}
+                  - {name: TURNSTONE_DB_URL, value: "{{ $t.dbUrl }}"}
+                  - name: POD_IP
+                    valueFrom: {fieldRef: {fieldPath: status.podIP}}
+                  - {name: TURNSTONE_ADVERTISE_URL, value: "http://$(POD_IP):8080"}
+                  - {name: TURNSTONE_NODE_ID, value: "eph-{{`{{workflow.name}}`}}"}
+                  - name: TURNSTONE_JWT_SECRET
+                    valueFrom: {secretKeyRef: {name: {{ $t.authSecret }}, key: TURNSTONE_JWT_SECRET}}
+                readinessProbe:
+                  httpGet: {path: /health, port: http}
+                  periodSeconds: 5
+                resources:
+                  requests: {cpu: 100m, memory: 512Mi}
+                  limits: {cpu: "2", memory: 1Gi}
+
+    - name: drive
+      outputs:
+        parameters:
+          - name: result
+            valueFrom: {path: /tmp/result.txt}
+      container:
+        image: {{ $t.image }}
+        command: [python3, /drive/drive.py]
+        env:
+          - {name: CONSOLE_URL, value: {{ $t.consoleUrl | quote }}}
+          - {name: NODE_ID, value: "eph-{{`{{workflow.name}}`}}"}
+          - {name: AGENT, value: {{ $name | quote }}}
+          - {name: WORKFLOW, value: "{{`{{workflow.name}}`}}"}
+          - {name: PERSONA, value: {{ $name | quote }}}
+          - {name: MODEL, value: {{ .Values.workstream.model | quote }}}
+          - {name: AUTO_APPROVE, value: {{ .Values.workstream.autoApprove | quote }}}
+          - {name: INSTRUCTIONS, value: {{ .Values.workstream.instructions | quote }}}
+          - {name: TIMEOUT_SECONDS, value: {{ .Values.workstream.timeoutSeconds | quote }}}
+          - {name: PAYLOAD, value: "{{`{{workflow.parameters.payload}}`}}"}
+          - name: TURNSTONE_TOKEN
+            valueFrom: {secretKeyRef: {name: {{ $t.runnerTokenSecret }}, key: token}}
+        volumeMounts:
+          - {name: drive, mountPath: /drive}
+      volumes:
+        - name: drive
+          configMap: {name: {{ $name }}-drive}
+
+    - name: stop-node
+      resource:
+        action: delete
+        flags: [--ignore-not-found]
+        manifest: |
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: eph-{{`{{workflow.name}}`}}
+            namespace: {{ $t.namespace }}

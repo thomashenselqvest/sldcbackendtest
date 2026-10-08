@@ -115,22 +115,22 @@ class Kube:
             timeout=30,
         )
 
-    def get_secret(self, name: str) -> dict[str, Any] | None:
-        r = self.client.get(f"/api/v1/namespaces/{NAMESPACE}/secrets/{name}")
+    def get_secret(self, name: str, namespace: str = NAMESPACE) -> dict[str, Any] | None:
+        r = self.client.get(f"/api/v1/namespaces/{namespace}/secrets/{name}")
         if r.status_code == 404:
             return None
         r.raise_for_status()
         return r.json()
 
-    def create_secret(self, name: str, data: dict[str, str]) -> None:
+    def create_secret(self, name: str, data: dict[str, str], namespace: str = NAMESPACE) -> None:
         body = {
             "apiVersion": "v1",
             "kind": "Secret",
-            "metadata": {"name": name, "namespace": NAMESPACE},
+            "metadata": {"name": name, "namespace": namespace},
             "type": "Opaque",
             "stringData": data,
         }
-        self.client.post(f"/api/v1/namespaces/{NAMESPACE}/secrets", json=body).raise_for_status()
+        self.client.post(f"/api/v1/namespaces/{namespace}/secrets", json=body).raise_for_status()
 
     def restart_deployment(self, name: str) -> None:
         patch = {
@@ -257,6 +257,55 @@ def sync_mcp(api: Api) -> None:
     raise SystemExit(f"MCP servers not connected: {status}")
 
 
+def sync_service_users(api: Api, kube: Kube) -> None:
+    """Non-admin users with a custom role; token minted once into a Kubernetes Secret."""
+    users = load("service-users.yaml") or []
+    if not users:
+        return
+    roles = {r["name"]: r for r in items(api.req("GET", "/v1/api/admin/roles"), "roles")}
+    accounts = {u["username"]: u for u in items(api.req("GET", "/v1/api/admin/users"), "users")}
+    for su in users:
+        role = dict(su["role"])
+        role["permissions"] = ",".join(role["permissions"])
+        cur = roles.get(role["name"])
+        if cur:
+            role_id = cur["role_id"]
+            api.req("PUT", f"/v1/api/admin/roles/{role_id}", role)
+        else:
+            role_id = api.req("POST", "/v1/api/admin/roles", role)["role_id"]
+        log(f"role {role['name']}: {'updated' if cur else 'created'}")
+
+        user = accounts.get(su["username"])
+        if user:
+            user_id = user["user_id"]
+        else:
+            password = "".join(secrets.choice(string.ascii_letters + string.digits) for _ in range(40))
+            user_id = api.req(
+                "POST",
+                "/v1/api/admin/users",
+                {"username": su["username"], "display_name": su.get("display_name", ""), "password": password},
+            )["user_id"]
+            log(f"user {su['username']}: created")
+        assigned = {r.get("role_id") for r in items(api.req("GET", f"/v1/api/admin/users/{user_id}/roles"), "roles")}
+        if role_id not in assigned:
+            api.req("POST", f"/v1/api/admin/users/{user_id}/roles", {"role_id": role_id})
+            log(f"user {su['username']}: role {role['name']} assigned")
+
+        tok = su["token"]
+        ns, name = tok["secret"]["namespace"], tok["secret"]["name"]
+        if kube.get_secret(name, ns):
+            log(f"user {su['username']}: token Secret {ns}/{name} exists")
+            continue
+        raw = api.req(
+            "POST", f"/v1/api/admin/users/{user_id}/tokens", {"name": f"{name}", "scopes": tok["scopes"]}
+        )
+        token = raw.get("token") or raw.get("raw_token") or ""
+        if not token:
+            raise SystemExit(f"token response for {su['username']} had no token field: {sorted(raw)}")
+        kube.create_secret(name, {"token": token, "user_id": user_id}, namespace=ns)
+        log(f"user {su['username']}: token minted into Secret {ns}/{name}")
+
+
 def sync_policies(api: Api) -> None:
     existing = {p["name"]: p for p in items(api.req("GET", "/v1/api/admin/policies"), "policies", "items")}
     for p in load("policies.yaml") or []:
@@ -333,6 +382,7 @@ def main() -> None:
     agent_token = ensure_agent_token(kube)
     sync_skills(api, {"agent_token": agent_token})
     sync_policies(api)
+    sync_service_users(api, kube)
 
     if needs_restart:
         kube.restart_deployment(SERVER_DEPLOYMENT)

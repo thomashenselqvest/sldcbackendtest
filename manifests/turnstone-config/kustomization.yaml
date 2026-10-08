@@ -17,5 +17,6 @@ configMapGenerator:
       - config/mcp-servers.yaml
       - config/policies.yaml
       - config/skills.yaml
+      - config/service-users.yaml
       - skill--turnstone-admin--SKILL.md=config/skills/turnstone-admin/SKILL.md
       - skill--turnstone-admin--scripts--tsadmin.py=config/skills/turnstone-admin/scripts/tsadmin.py

@@ -1,0 +1,68 @@
+# Sensors: submit agent workflows.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: aisdlc-sensor
+  namespace: aisdlc-agents
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: aisdlc-sensor
+  namespace: aisdlc-agents
+rules:
+  - apiGroups: [argoproj.io]
+    resources: [workflows, workflowtemplates]
+    verbs: [get, list, watch, create]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: aisdlc-sensor
+  namespace: aisdlc-agents
+roleRef: {apiGroup: rbac.authorization.k8s.io, kind: Role, name: aisdlc-sensor}
+subjects: [{kind: ServiceAccount, name: aisdlc-sensor, namespace: aisdlc-agents}]
+---
+# Agent workflows (service account argo-workflow, created by the argo-workflows chart) start
+# and stop ephemeral Turnstone nodes as pods in the turnstone namespace. The pods use the
+# secrets already there, so none are copied into aisdlc-agents.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: aisdlc-ephemeral-nodes
+  namespace: turnstone
+rules:
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [create, get, list, watch, patch, delete]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: aisdlc-ephemeral-nodes
+  namespace: turnstone
+roleRef: {apiGroup: rbac.authorization.k8s.io, kind: Role, name: aisdlc-ephemeral-nodes}
+subjects: [{kind: ServiceAccount, name: argo-workflow, namespace: aisdlc-agents}]
+---
+# The central Turnstone config sync Job writes the aisdlc-runner token Secret here.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: turnstone-config-runner-token
+  namespace: aisdlc-agents
+rules:
+  - apiGroups: [""]
+    resources: [secrets]
+    verbs: [create]
+  - apiGroups: [""]
+    resources: [secrets]
+    resourceNames: [turnstone-runner-token]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: turnstone-config-runner-token
+  namespace: aisdlc-agents
+roleRef: {apiGroup: rbac.authorization.k8s.io, kind: Role, name: turnstone-config-runner-token}
+subjects: [{kind: ServiceAccount, name: turnstone-config, namespace: turnstone}]

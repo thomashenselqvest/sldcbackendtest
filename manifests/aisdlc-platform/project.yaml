@@ -1,0 +1,15 @@
+# Argo CD project for AI SDLC agents: only this repo, only the aisdlc-agents namespace.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: aisdlc-agents
+  namespace: argocd
+spec:
+  description: AI SDLC agents (webhook + ephemeral Turnstone node + persona), one Application per agent
+  sourceRepos: [https://github.com/thomashenselqvest/sldcbackendtest.git]
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: aisdlc-agents
+  clusterResourceWhitelist: []
+  namespaceResourceWhitelist:
+    - {group: "*", kind: "*"}

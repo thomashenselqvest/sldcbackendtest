@@ -1,0 +1,7 @@
+apiVersion: v2
+name: aisdlc-agent
+description: >-
+  An AI SDLC agent: a webhook receiver (Argo Events), a workflow that starts an ephemeral
+  Turnstone node per event, and a Turnstone persona that handles the event on that node.
+type: application
+version: 0.1.0
