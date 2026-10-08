@@ -1,0 +1,49 @@
+# Adds the in-cluster Argo Workflows server as the active connection (via the add_connection
+# tool). Runs after every sync; "connection name already exists" counts as success.
+# Permissions stay at the server's default (read-only); change them in the UI under /settings.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: argo-workflows-mcp-setup
+  namespace: argo-mcp
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 5
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: setup
+          image: python:3.13-alpine
+          env:
+            - {name: MCP_URL, value: "http://argo-workflows-mcp.argo-mcp.svc:8000/mcp"}
+          command: [python3, -c]
+          args:
+            - |
+              import json, os, time, urllib.request
+              url, sid = os.environ["MCP_URL"], {}
+              def rpc(method, params=None, notify=False):
+                  body = {"jsonrpc": "2.0", "method": method, "params": params or {}}
+                  if not notify: body["id"] = 1
+                  h = {"Content-Type": "application/json", "Accept": "application/json, text/event-stream"}
+                  if sid.get("id"): h["mcp-session-id"] = sid["id"]
+                  with urllib.request.urlopen(urllib.request.Request(url, json.dumps(body).encode(), h, method="POST"), timeout=60) as r:
+                      sid.setdefault("id", r.headers.get("mcp-session-id")); raw = r.read().decode()
+                  if notify or not raw.strip(): return None
+                  msgs = [json.loads(l[5:]) for l in raw.splitlines() if l.startswith("data:")] or [json.loads(raw)]
+                  return next(m for m in msgs if "result" in m or "error" in m)
+              for _ in range(60):
+                  try:
+                      rpc("initialize", {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "setup", "version": "1"}}); break
+                  except Exception as e:
+                      print("waiting for MCP gateway:", e); time.sleep(5)
+              rpc("notifications/initialized", notify=True)
+              res = rpc("tools/call", {"name": "add_connection", "arguments": {
+                  "name": "in-cluster", "base_url": "http://argo-workflows-server.argo.svc:2746",
+                  "default_namespace": "argo", "auth_type": "none", "activate": True}})
+              text = " ".join(c.get("text", "") for c in res.get("result", {}).get("content", []))
+              print(text)
+              if res.get("result", {}).get("isError") and "already exists" not in text:
+                  raise SystemExit(1)

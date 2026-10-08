@@ -14,6 +14,7 @@ A single-node kind cluster where Argo CD installs and manages, from this repo:
 | `infisical` | Infisical secret manager UI (+ its Postgres/Redis) | `infisical-standalone` 1.11.0 + Bitnami `postgresql`/`redis` + `values/infisical*.yaml` |
 | `qdrant` | Qdrant vector DB + dashboard, two Qdrant MCP servers, `rag-ingest` workflow | `qdrant` 1.19.2 + `manifests/rag` |
 | `helm-dashboard` | Helm Dashboard (Komodor) UI | `helm-dashboard` 2.0.7 + `manifests/helm-dashboard` |
+| `argo-workflows-mcp` | Heapy/argo-workflows-mcp (Argo-specific MCP tools + web UI) behind a supergateway SSE->streamable-HTTP sidecar | `manifests/argo-workflows-mcp` |
 | `turnstone-config` | Models, settings, MCP registration, admin agent + skill, policies | `manifests/turnstone-config` |
 
 ## Bootstrap
@@ -32,6 +33,7 @@ passwords land in `.secrets/`), installs Argo CD and applies `bootstrap/root-app
 | Turnstone console | http://localhost:8090 |
 | Turnstone server | http://localhost:8080 |
 | Qdrant dashboard | http://localhost:6333/dashboard |
+| Argo Workflows MCP UI | http://localhost:8883 (connections, permission settings, audit log) |
 | Helm Dashboard | http://localhost:8882 (no login; cluster-wide write access) |
 | Infisical | http://localhost:8881 (login: `.secrets/infisical-admin.txt`) |
 

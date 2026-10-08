@@ -22,7 +22,7 @@ if kind get clusters 2>/dev/null | grep -qx "$CLUSTER"; then
   echo "==> deleting existing cluster $CLUSTER"
   kind delete cluster --name "$CLUSTER"
 fi
-for port in 8080 8090 2746 8880 8881 6333 8882; do
+for port in 8080 8090 2746 8880 8881 6333 8882 8883; do
   if ss -ltnH "sport = :$port" | grep -q .; then die "localhost:$port is already in use"; fi
 done
 
@@ -63,7 +63,7 @@ while :; do
   total=$(grep -c . <<<"$status" || true)
   ready=$(grep -c '=Synced/Healthy$' <<<"$status" || true)
   echo "    $ready/$total ready: $(grep -v '=Synced/Healthy$' <<<"$status" | tr '\n' ' ')"
-  [[ $total -ge 16 && $ready -eq $total ]] && break
+  [[ $total -ge 17 && $ready -eq $total ]] && break
   (( SECONDS < deadline )) || die "timed out; check: kubectl -n argocd get applications"
   sleep 15
 done
@@ -78,5 +78,6 @@ Done.
   Infisical        http://localhost:8881   (login: $SECRETS_DIR/infisical-admin.txt)
   Qdrant dashboard http://localhost:6333/dashboard
   Helm Dashboard   http://localhost:8882
+  Argo WF MCP UI   http://localhost:8883
 Config sync log:   kubectl -n turnstone logs job/turnstone-config-sync
 EOF

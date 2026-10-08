@@ -12,3 +12,8 @@
 - name: rag-writer
   transport: streamable-http
   url: http://rag-writer-mcp.rag.svc:8000/mcp/
+# Argo-specific tools (logs, retry, terminate, cron, templates) via Heapy/argo-workflows-mcp.
+# Read-only until mutations are enabled in its UI (localhost:8883/settings).
+- name: argo-workflows
+  transport: streamable-http
+  url: http://argo-workflows-mcp.argo-mcp.svc:8000/mcp
