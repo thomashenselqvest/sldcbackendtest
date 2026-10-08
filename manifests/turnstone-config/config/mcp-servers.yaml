@@ -7,8 +7,8 @@
 # Knowledge base (Qdrant "knowledge" collection). Read-only for normal agents.
 - name: rag
   transport: streamable-http
-  url: http://rag-mcp.rag.svc:8000/mcp
+  url: http://rag-mcp.rag.svc:8000/mcp/   # trailing slash: the server 307-redirects /mcp
 # Read-write (adds qdrant-store). Give it only to curator/ingestion personas.
 - name: rag-writer
   transport: streamable-http
-  url: http://rag-writer-mcp.rag.svc:8000/mcp
+  url: http://rag-writer-mcp.rag.svc:8000/mcp/

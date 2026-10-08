@@ -34,7 +34,7 @@ spec:
           - {name: BRANCH, value: "{{workflow.parameters.branch}}"}
           - {name: PATH_PREFIX, value: "{{workflow.parameters.path-prefix}}"}
           - {name: RESET, value: "{{workflow.parameters.reset}}"}
-          - {name: MCP_URL, value: "http://rag-writer-mcp.rag.svc:8000/mcp"}
+          - {name: MCP_URL, value: "http://rag-writer-mcp.rag.svc:8000/mcp/"}
           - {name: QDRANT_URL, value: "http://qdrant.rag.svc:6333"}
           - {name: COLLECTION, value: knowledge}
         command: [python3]
