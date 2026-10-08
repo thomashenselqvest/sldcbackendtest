@@ -1,0 +1,119 @@
+# Index Markdown files from a GitHub repo into the Qdrant "knowledge" collection.
+# Each chunk (split at headings, ~1500 chars) is stored through the rag-writer MCP server's
+# qdrant-store tool, so embeddings match what qdrant-find searches with.
+#
+#   Argo Workflows UI -> Workflow Templates -> rag-ingest -> Submit
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: rag-ingest
+  namespace: argo
+spec:
+  serviceAccountName: argo-workflow
+  entrypoint: ingest
+  arguments:
+    parameters:
+      - name: repo
+        value: thomashenselqvest/sldcbackendtest
+        description: GitHub repo (owner/name), public
+      - name: branch
+        value: main
+      - name: path-prefix
+        value: ""
+        description: Only index files under this path (empty = whole repo)
+      - name: reset
+        value: "false"
+        enum: ["false", "true"]
+        description: Delete the collection first (re-runs otherwise add duplicates)
+  templates:
+    - name: ingest
+      script:
+        image: python:3.13-alpine
+        env:
+          - {name: REPO, value: "{{workflow.parameters.repo}}"}
+          - {name: BRANCH, value: "{{workflow.parameters.branch}}"}
+          - {name: PATH_PREFIX, value: "{{workflow.parameters.path-prefix}}"}
+          - {name: RESET, value: "{{workflow.parameters.reset}}"}
+          - {name: MCP_URL, value: "http://rag-writer-mcp.rag.svc:8000/mcp"}
+          - {name: QDRANT_URL, value: "http://qdrant.rag.svc:6333"}
+          - {name: COLLECTION, value: knowledge}
+        command: [python3]
+        source: |
+          import io, json, os, re, tarfile, time, urllib.request, urllib.error
+
+          repo, branch, prefix = os.environ["REPO"], os.environ["BRANCH"], os.environ["PATH_PREFIX"].strip("/")
+          mcp_url, collection = os.environ["MCP_URL"], os.environ["COLLECTION"]
+
+          def req(url, data=None, method=None, headers=None):
+              r = urllib.request.Request(url, data=data, method=method, headers=headers or {})
+              return urllib.request.urlopen(r, timeout=120)
+
+          if os.environ["RESET"] == "true":
+              try:
+                  req(f"{os.environ['QDRANT_URL']}/collections/{collection}", method="DELETE")
+                  print(f"collection {collection} deleted")
+              except urllib.error.HTTPError as e:
+                  print(f"collection delete: HTTP {e.code} (ignored)")
+
+          # --- MCP client (streamable HTTP, JSON-RPC) ---------------------------------
+          session = {}
+          def rpc(method, params=None, notify=False):
+              body = {"jsonrpc": "2.0", "method": method, "params": params or {}}
+              if not notify:
+                  body["id"] = int(time.time() * 1000)
+              h = {"Content-Type": "application/json", "Accept": "application/json, text/event-stream"}
+              if "id" in session:
+                  h["mcp-session-id"] = session["id"]
+              with req(mcp_url, json.dumps(body).encode(), "POST", h) as r:
+                  session.setdefault("id", r.headers.get("mcp-session-id"))
+                  raw = r.read().decode()
+              if notify or not raw.strip():
+                  return None
+              msgs = [json.loads(l[5:]) for l in raw.splitlines() if l.startswith("data:")] or [json.loads(raw)]
+              res = next(m for m in msgs if "result" in m or "error" in m)
+              if "error" in res:
+                  raise SystemExit(f"MCP error: {res['error']}")
+              return res["result"]
+
+          for _ in range(60):  # the MCP server installs itself on start
+              try:
+                  rpc("initialize", {"protocolVersion": "2025-06-18", "capabilities": {},
+                                     "clientInfo": {"name": "rag-ingest", "version": "1"}})
+                  break
+              except Exception as e:
+                  print(f"waiting for MCP server: {e}"); time.sleep(5)
+          rpc("notifications/initialized", notify=True)
+
+          # --- fetch + chunk ----------------------------------------------------------
+          url = f"https://github.com/{repo}/archive/refs/heads/{branch}.tar.gz"
+          tar = tarfile.open(fileobj=io.BytesIO(req(url).read()), mode="r:gz")
+          def chunks(text, limit=1500):
+              parts, cur, heading = [], [], ""
+              for line in text.splitlines():
+                  if re.match(r"^#{1,4} ", line) and sum(map(len, cur)) > 200:
+                      parts.append((heading, "\n".join(cur))); cur = []
+                  if re.match(r"^#{1,4} ", line):
+                      heading = line.lstrip("# ").strip()
+                  cur.append(line)
+                  if sum(map(len, cur)) > limit:
+                      parts.append((heading, "\n".join(cur))); cur = []
+              if cur:
+                  parts.append((heading, "\n".join(cur)))
+              return [(h, c.strip()) for h, c in parts if c.strip()]
+
+          files = stored = 0
+          for m in tar.getmembers():
+              path = m.name.split("/", 1)[1] if "/" in m.name else m.name
+              if not m.isfile() or not path.endswith(".md") or (prefix and not path.startswith(prefix)):
+                  continue
+              text = tar.extractfile(m).read().decode("utf-8", "replace")
+              files += 1
+              for i, (heading, chunk) in enumerate(chunks(text)):
+                  rpc("tools/call", {"name": "qdrant-store", "arguments": {
+                      "information": chunk,
+                      "metadata": {"source": f"github.com/{repo}", "branch": branch, "path": path,
+                                   "heading": heading, "chunk": i},
+                  }})
+                  stored += 1
+              print(f"indexed {path}")
+          print(f"done: {files} files, {stored} chunks -> collection {collection}")

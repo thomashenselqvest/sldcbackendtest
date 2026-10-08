@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: qdrant
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: rag
+  syncPolicy:
+    automated: {prune: true, selfHeal: true}
+    retry: {limit: 10, backoff: {duration: 10s, factor: 2, maxDuration: 3m}}
+    syncOptions: [CreateNamespace=true, ServerSideApply=true]
+  sources:
+    - repoURL: https://qdrant.github.io/qdrant-helm
+      chart: qdrant
+      targetRevision: 1.19.2
+      helm:
+        releaseName: qdrant
+        valueFiles: [$values/values/qdrant.yaml]
+    - repoURL: https://github.com/thomashenselqvest/sldcbackendtest.git
+      targetRevision: main
+      path: manifests/rag
+    - repoURL: https://github.com/thomashenselqvest/sldcbackendtest.git
+      targetRevision: main
+      ref: values

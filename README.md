@@ -12,6 +12,7 @@ A single-node kind cluster where Argo CD installs and manages, from this repo:
 | `argo-mcp` | Kubernetes MCP server for Turnstone agents | `ghcr.io/containers/charts/kubernetes-mcp-server` 0.1.0 + `manifests/argo-mcp` |
 | `external-secrets` | External Secrets Operator | `external-secrets` 2.12.0 |
 | `infisical` | Infisical secret manager UI (+ its Postgres/Redis) | `infisical-standalone` 1.11.0 + Bitnami `postgresql`/`redis` + `values/infisical*.yaml` |
+| `qdrant` | Qdrant vector DB + dashboard, two Qdrant MCP servers, `rag-ingest` workflow | `qdrant` 1.19.2 + `manifests/rag` |
 | `turnstone-config` | Models, settings, MCP registration, admin agent + skill, policies | `manifests/turnstone-config` |
 
 ## Bootstrap
@@ -29,6 +30,7 @@ passwords land in `.secrets/`), installs Argo CD and applies `bootstrap/root-app
 | Argo Workflows | http://localhost:2746 |
 | Turnstone console | http://localhost:8090 |
 | Turnstone server | http://localhost:8080 |
+| Qdrant dashboard | http://localhost:6333/dashboard |
 | Infisical | http://localhost:8881 (login: `.secrets/infisical-admin.txt`) |
 
 ## Changing Turnstone config
@@ -89,3 +91,19 @@ machine identity used by the `infisical` ClusterSecretStore. The mapping is in
   sync `turnstone-config` in Argo CD so the models pick it up.
 - **Don't rotate the DB passwords in Infisical**: Postgres keeps the password it was initialised with.
 - Generated machine tokens (agent/runner tokens, MCP service-account token) stay in Kubernetes only.
+
+## Knowledge base (RAG)
+
+Qdrant holds the `knowledge` collection; browse and search it in the dashboard
+(http://localhost:6333/dashboard). Turnstone agents reach it through two MCP servers
+(`qdrant/mcp-server-qdrant` 0.8.1, local FastEmbed `all-MiniLM-L6-v2` embeddings):
+
+| Turnstone MCP server | Tools | For |
+|---|---|---|
+| `rag` | `qdrant-find` | every agent (read-only) |
+| `rag-writer` | `qdrant-find`, `qdrant-store` | curator/ingestion agents |
+
+**Ingest documents**: Argo Workflows UI -> Workflow Templates -> `rag-ingest` -> Submit, with a
+public GitHub repo (`owner/name`), branch and optional path prefix. Markdown files are split at
+headings and stored with metadata (`source`, `path`, `heading`). Re-running without `reset=true`
+adds duplicates.
