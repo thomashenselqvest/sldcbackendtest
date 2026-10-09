@@ -1,0 +1,28 @@
+# Secrets come from bootstrap/litellm-secrets.sh (never in Git).
+masterkeySecretName: litellm-masterkey
+masterkeySecretKey: masterkey
+environmentSecrets: [litellm-env]   # ANTHROPIC_API_KEY, UI_USERNAME, UI_PASSWORD
+db:
+  deployStandalone: false   # own Postgres source in apps/litellm.yaml
+  useExisting: true
+  endpoint: litellm-postgresql
+  database: litellm
+  secret: {name: litellm-db, usernameKey: username, passwordKey: password}
+# The chart's migration Job is an Argo CD PreSync hook, which would run before Postgres exists
+# and block the first sync forever. Without it the proxy runs the schema update at startup.
+migrationJob:
+  enabled: false
+resources:
+  requests: {cpu: 100m, memory: 512Mi}
+proxy_config:
+  model_list:
+    - model_name: opus
+      litellm_params: {model: anthropic/claude-opus-5-5, api_key: os.environ/ANTHROPIC_API_KEY}
+    - model_name: fable
+      litellm_params: {model: anthropic/claude-fable-5-1, api_key: os.environ/ANTHROPIC_API_KEY}
+    - model_name: sonnet
+      litellm_params: {model: anthropic/claude-sonnet-5-5, api_key: os.environ/ANTHROPIC_API_KEY}
+    - model_name: haiku
+      litellm_params: {model: anthropic/claude-haiku-5-5, api_key: os.environ/ANTHROPIC_API_KEY}
+  general_settings:
+    master_key: os.environ/PROXY_MASTER_KEY

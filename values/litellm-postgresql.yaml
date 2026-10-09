@@ -1,0 +1,12 @@
+fullnameOverride: litellm-postgresql
+image:
+  registry: mirror.gcr.io
+  repository: bitnamilegacy/postgresql
+  tag: 16.2.0-debian-11-r16
+auth:
+  username: litellm
+  database: litellm
+  existingSecret: litellm-db   # keys: password, postgres-password
+primary:
+  persistence:
+    size: 2Gi

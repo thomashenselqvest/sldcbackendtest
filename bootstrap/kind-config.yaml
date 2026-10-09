@@ -12,3 +12,4 @@ nodes:
       - {containerPort: 30633, hostPort: 6333, listenAddress: "127.0.0.1"}   # Qdrant API + dashboard
       - {containerPort: 30882, hostPort: 8882, listenAddress: "127.0.0.1"}   # Helm Dashboard
       - {containerPort: 30883, hostPort: 8883, listenAddress: "127.0.0.1"}   # Argo Workflows MCP UI
+      - {containerPort: 30884, hostPort: 8884, listenAddress: "127.0.0.1"}   # LiteLLM proxy + UI

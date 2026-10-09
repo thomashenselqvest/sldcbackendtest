@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: litellm
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: litellm
+  syncPolicy:
+    automated: {prune: true, selfHeal: true}
+    retry: {limit: 10, backoff: {duration: 10s, factor: 2, maxDuration: 3m}}
+    syncOptions: [CreateNamespace=true, ServerSideApply=true]
+  sources:
+    - repoURL: ghcr.io/berriai
+      chart: litellm-helm
+      targetRevision: 1.104.2
+      helm:
+        releaseName: litellm
+        valueFiles: [$values/values/litellm.yaml]
+    - repoURL: registry-1.docker.io/bitnamicharts
+      chart: postgresql
+      targetRevision: 14.1.10
+      helm:
+        releaseName: litellm-postgresql
+        valueFiles: [$values/values/litellm-postgresql.yaml]
+    - repoURL: https://github.com/thomashenselqvest/sldcbackendtest.git
+      targetRevision: main
+      path: manifests/litellm
+    - repoURL: https://github.com/thomashenselqvest/sldcbackendtest.git
+      targetRevision: main
+      ref: values

@@ -1,0 +1,10 @@
+# LiteLLM proxy + admin UI (/ui) on localhost:8884 (kind port mapping).
+apiVersion: v1
+kind: Service
+metadata:
+  name: litellm-np
+  namespace: litellm
+spec:
+  type: NodePort
+  selector: {app.kubernetes.io/name: litellm, app.kubernetes.io/instance: litellm}
+  ports: [{name: http, port: 4000, targetPort: 4000, nodePort: 30884}]
